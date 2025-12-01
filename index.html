@@ -45,36 +45,36 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 0.5rem;
-        padding: 0.9rem 1.2rem;
-        border-radius: 12px;
-        background: rgba(0, 0, 0, 0.55);
-        backdrop-filter: blur(10px);
-        max-width: min(94vw, 540px);
+        gap: 0.75rem;
+        padding: 1rem 1.6rem;
+        border-radius: 18px;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(14px);
+        width: min(95vw, 620px);
       }
 
       .action-row {
         width: 100%;
+        position: relative;
         display: flex;
+        align-items: center;
+        justify-content: center;
         gap: 0.75rem;
-        flex-wrap: wrap;
-      }
-
-      .action-row button {
-        flex: 1;
-        min-width: 120px;
       }
 
       button {
-        padding: 0.85rem 1rem;
-        font-size: 1rem;
+        padding: clamp(0.85rem, 1vw + 0.5rem, 1.1rem) clamp(1rem, 1vw + 0.8rem, 1.4rem);
+        font-size: clamp(1rem, 1vw + 0.9rem, 1.3rem);
         font-weight: 600;
-        border-radius: 12px;
+        border-radius: 16px;
         border: none;
         background: #3859ff;
         color: #fff;
         cursor: pointer;
         transition: opacity 0.2s ease, transform 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
       }
 
       button:disabled {
@@ -95,10 +95,39 @@
 
       #captureButton {
         display: none;
+        flex: 0 0 auto;
+        min-width: clamp(200px, 45vw, 320px);
+        padding: clamp(1rem, 2vw + 0.6rem, 1.8rem);
+        border-radius: 999px;
+        font-size: clamp(1.1rem, 2vw + 0.8rem, 1.6rem);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin: 0 auto;
+      }
+
+      #captureButton .button-icon {
+        display: inline-flex;
+        margin-right: 0.7rem;
+      }
+
+      #captureButton .button-label {
+        display: inline-block;
+      }
+
+      #captureButton svg {
+        width: clamp(24px, 3vw, 36px);
+        height: clamp(24px, 3vw, 36px);
+        fill: currentColor;
       }
 
       #switchButton {
         display: none;
+        flex: 0 0 auto;
+        margin-left: auto;
+        border-radius: 999px;
+        padding: clamp(0.7rem, 1vw + 0.4rem, 1rem) clamp(1rem, 1vw + 0.6rem, 1.2rem);
+        background: rgba(255, 255, 255, 0.15);
+        font-size: clamp(0.95rem, 0.8vw + 0.8rem, 1.1rem);
       }
 
       .start-overlay {
@@ -117,13 +146,27 @@
         pointer-events: none;
       }
 
+      #startButton {
+        font-size: clamp(1.1rem, 3vw + 0.8rem, 1.8rem);
+        padding: clamp(1rem, 3vw + 0.8rem, 1.8rem) clamp(2rem, 6vw + 1rem, 3rem);
+        border-radius: 999px;
+      }
+
       @media (max-width: 640px) {
-        #startButton,
-        #captureButton,
+        .controls {
+          bottom: 0.5rem;
+        }
+
+        .status {
+          font-size: 0.85rem;
+        }
+
         #switchButton {
-          flex-basis: 100%;
-          font-size: 1.3rem;
-          padding: 1.2rem 1.4rem;
+          order: 2;
+        }
+
+        #captureButton {
+          order: 1;
         }
       }
 
@@ -138,7 +181,16 @@
     </div>
     <div class="controls">
       <div class="action-row">
-        <button id="captureButton" disabled>Take Photo</button>
+        <button id="captureButton" disabled>
+          <span class="button-icon" aria-hidden="true">
+            <svg viewBox="0 0 64 64" focusable="false">
+              <path
+                d="M22 16a4 4 0 0 1 4-4h12a4 4 0 0 1 4 4h8a6 6 0 0 1 6 6v24a6 6 0 0 1-6 6H14a6 6 0 0 1-6-6V22a6 6 0 0 1 6-6h8Zm22 10a12 12 0 1 0 0 24 12 12 0 0 0 0-24Zm0 6a6 6 0 1 1 0 12 6 6 0 0 1 0-12Z"
+              />
+            </svg>
+          </span>
+          <span class="button-label">Take Photo</span>
+        </button>
         <button id="switchButton" disabled>Switch Camera</button>
       </div>
       <div class="status" id="status">Allow camera access to begin.</div>
@@ -180,7 +232,7 @@
           currentFacing = facingMode;
           video.srcObject = newStream;
           await video.play();
-          status.textContent = "Camera is live. Tap capture to save a photo.";
+          status.textContent = "";
           startOverlay.classList.add("hidden");
           button.disabled = true;
           captureButton.style.display = "block";
