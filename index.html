@@ -53,14 +53,14 @@
         max-width: min(94vw, 540px);
       }
 
-      .button-row {
+      .action-row {
         width: 100%;
         display: flex;
         gap: 0.75rem;
         flex-wrap: wrap;
       }
 
-      .button-row button {
+      .action-row button {
         flex: 1;
         min-width: 120px;
       }
@@ -97,6 +97,10 @@
         display: none;
       }
 
+      #switchButton {
+        display: none;
+      }
+
       .start-overlay {
         position: fixed;
         inset: 0;
@@ -115,7 +119,8 @@
 
       @media (max-width: 640px) {
         #startButton,
-        #captureButton {
+        #captureButton,
+        #switchButton {
           flex-basis: 100%;
           font-size: 1.3rem;
           padding: 1.2rem 1.4rem;
@@ -132,8 +137,9 @@
       <button id="startButton">Start Camera</button>
     </div>
     <div class="controls">
-      <div class="button-row">
+      <div class="action-row">
         <button id="captureButton" disabled>Take Photo</button>
+        <button id="switchButton" disabled>Switch Camera</button>
       </div>
       <div class="status" id="status">Allow camera access to begin.</div>
     </div>
@@ -143,12 +149,18 @@
       const button = document.getElementById("startButton");
       const status = document.getElementById("status");
       const captureButton = document.getElementById("captureButton");
+      const switchButton = document.getElementById("switchButton");
       const startOverlay = document.getElementById("startOverlay");
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
       let stream;
+      let currentFacing = "environment";
 
-      async function startCamera() {
+      async function startCamera(options = {}) {
+        const {
+          facingMode = currentFacing,
+          showRetryOverlay = true,
+        } = options;
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
           status.textContent =
             "Camera access is not supported in this browser.";
@@ -156,29 +168,50 @@
           return;
         }
 
+        const previousStream = stream;
         try {
           status.textContent = "Starting camera…";
           button.disabled = true;
-          stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: "environment" },
+          const newStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode },
             audio: false,
           });
-          video.srcObject = stream;
+          stream = newStream;
+          currentFacing = facingMode;
+          video.srcObject = newStream;
           await video.play();
           status.textContent = "Camera is live. Tap capture to save a photo.";
           startOverlay.classList.add("hidden");
           button.disabled = true;
           captureButton.style.display = "block";
           captureButton.disabled = false;
+          switchButton.style.display = "block";
+          switchButton.disabled = false;
+          if (previousStream) {
+            previousStream.getTracks().forEach((track) => track.stop());
+          }
         } catch (error) {
           console.error(error);
-          status.textContent =
-            "Unable to access the camera. Check permissions and try again.";
-          button.disabled = false;
-          button.textContent = "Try Again";
-          startOverlay.classList.remove("hidden");
-          captureButton.style.display = "none";
-          captureButton.disabled = true;
+          const hadStream = Boolean(previousStream);
+          status.textContent = hadStream
+            ? "Unable to switch camera. Keeping current view."
+            : "Unable to access the camera. Check permissions and try again.";
+          if (showRetryOverlay) {
+            button.disabled = false;
+            button.textContent = "Try Again";
+            startOverlay.classList.remove("hidden");
+          }
+          if (!hadStream) {
+            captureButton.style.display = "none";
+            captureButton.disabled = true;
+            switchButton.style.display = "none";
+            switchButton.disabled = true;
+          } else {
+            captureButton.style.display = "block";
+            captureButton.disabled = false;
+            switchButton.style.display = "block";
+            switchButton.disabled = false;
+          }
         }
       }
 
@@ -214,9 +247,19 @@
         }, "image/png");
       }
 
-      window.addEventListener("DOMContentLoaded", startCamera);
-      button.addEventListener("click", startCamera);
+      function switchCamera() {
+        const nextFacing =
+          currentFacing === "environment" ? "user" : "environment";
+        switchButton.disabled = true;
+        captureButton.disabled = true;
+        status.textContent = "Switching camera…";
+        startCamera({ facingMode: nextFacing, showRetryOverlay: false });
+      }
+
+      window.addEventListener("DOMContentLoaded", () => startCamera());
+      button.addEventListener("click", () => startCamera());
       captureButton.addEventListener("click", capturePhoto);
+      switchButton.addEventListener("click", switchCamera);
     </script>
   </body>
 </html>
