@@ -97,15 +97,42 @@
         display: none;
       }
 
+      .start-overlay {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: rgba(0, 0, 0, 0.4);
+        z-index: 2;
+        transition: opacity 0.3s ease;
+      }
+
+      .start-overlay.hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      @media (max-width: 640px) {
+        #startButton,
+        #captureButton {
+          flex-basis: 100%;
+          font-size: 1.3rem;
+          padding: 1.2rem 1.4rem;
+        }
+      }
+
     </style>
   </head>
   <body>
     <main>
       <video id="cameraFeed" autoplay playsinline></video>
     </main>
+    <div class="start-overlay" id="startOverlay">
+      <button id="startButton">Start Camera</button>
+    </div>
     <div class="controls">
       <div class="button-row">
-        <button id="startButton">Start Camera</button>
         <button id="captureButton" disabled>Take Photo</button>
       </div>
       <div class="status" id="status">Allow camera access to begin.</div>
@@ -116,6 +143,7 @@
       const button = document.getElementById("startButton");
       const status = document.getElementById("status");
       const captureButton = document.getElementById("captureButton");
+      const startOverlay = document.getElementById("startOverlay");
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
       let stream;
@@ -138,7 +166,8 @@
           video.srcObject = stream;
           await video.play();
           status.textContent = "Camera is live. Tap capture to save a photo.";
-          button.style.display = "none";
+          startOverlay.classList.add("hidden");
+          button.disabled = true;
           captureButton.style.display = "block";
           captureButton.disabled = false;
         } catch (error) {
@@ -146,8 +175,8 @@
           status.textContent =
             "Unable to access the camera. Check permissions and try again.";
           button.disabled = false;
-          button.style.display = "block";
           button.textContent = "Try Again";
+          startOverlay.classList.remove("hidden");
           captureButton.style.display = "none";
           captureButton.disabled = true;
         }
@@ -167,8 +196,6 @@
 
         const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
         const filename = `photo-${timestamp}.png`;
-        const previewSrc = canvas.toDataURL("image/png");
-
         canvas.toBlob((blob) => {
           if (!blob) {
             status.textContent = "Could not capture photo.";
@@ -187,6 +214,7 @@
         }, "image/png");
       }
 
+      window.addEventListener("DOMContentLoaded", startCamera);
       button.addEventListener("click", startCamera);
       captureButton.addEventListener("click", capturePhoto);
     </script>
