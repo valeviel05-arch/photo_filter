@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0"
     />
-    <title>Camera Preview</title>
+    <title>Technicolor Preview</title>
     <style>
       :root {
         color-scheme: light dark;
@@ -27,6 +27,7 @@
         position: relative;
         flex: 1;
         isolation: isolate;
+        overflow: hidden;
       }
 
       video {
@@ -36,23 +37,18 @@
         width: 100%;
         height: 100%;
         object-fit: cover;
-        filter: saturate(1.1) contrast(1.05);
+        filter: url(#technicolor-live);
       }
 
       main::after {
         content: "";
         position: absolute;
         inset: 0;
-        background: linear-gradient(
-            180deg,
-            rgba(16, 61, 173, 0.55) 0%,
-            rgba(16, 61, 173, 0.15) 35%,
-            rgba(1, 7, 30, 0.4) 100%
-          ),
-          rgba(30, 100, 255, 0.25);
-        mix-blend-mode: screen;
+        background: url('data:image/svg+xml;utf8,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noiseFilter"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noiseFilter)" opacity="0.12"/%3E%3C/svg%3E');
+        opacity: 0.15;
         pointer-events: none;
         z-index: 1;
+        mix-blend-mode: overlay;
       }
 
       .controls {
@@ -69,6 +65,7 @@
         background: rgba(0, 0, 0, 0.6);
         backdrop-filter: blur(14px);
         width: min(95vw, 620px);
+        z-index: 10;
       }
 
       .action-row {
@@ -86,7 +83,7 @@
         font-weight: 600;
         border-radius: 16px;
         border: none;
-        background: #3859ff;
+        background: #e32828;
         color: #fff;
         cursor: pointer;
         transition: opacity 0.2s ease, transform 0.2s ease;
@@ -96,7 +93,8 @@
       }
 
       button:disabled {
-        background: #a6b4ff;
+        background: #552a2a;
+        color: #aaa;
         cursor: not-allowed;
       }
 
@@ -128,10 +126,6 @@
         margin-right: 0.7rem;
       }
 
-      #captureButton .button-label {
-        display: inline-block;
-      }
-
       #captureButton svg {
         width: clamp(24px, 3vw, 36px);
         height: clamp(24px, 3vw, 36px);
@@ -154,8 +148,8 @@
         display: flex;
         justify-content: center;
         align-items: center;
-        background: rgba(0, 0, 0, 0.4);
-        z-index: 2;
+        background: #000;
+        z-index: 20;
         transition: opacity 0.3s ease;
       }
 
@@ -174,23 +168,39 @@
         .controls {
           bottom: 0.5rem;
         }
-
-        .status {
-          font-size: 0.85rem;
-        }
-
         #switchButton {
           order: 2;
         }
-
         #captureButton {
           order: 1;
         }
       }
-
     </style>
   </head>
   <body>
+    <svg style="display: none;">
+      <defs>
+        <filter id="technicolor-live">
+          <feColorMatrix type="saturate" values="0.88" result="saturated" />
+          
+          <feComponentTransfer in="saturated" result="curved">
+            <feFuncR type="table" tableValues="0.03 0.53 0.96"/>
+            <feFuncG type="table" tableValues="0 0.5 1"/>
+            <feFuncB type="table" tableValues="0.02 0.5 0.95"/>
+          </feComponentTransfer>
+          
+          <feColorMatrix in="curved" type="matrix" values="
+            1 0 0 0 0
+            0 1 0 0 0
+            0 0 1.05 0 -0.02
+            0 0 0 1 0" result="balanced"/>
+             
+          <feFlood flood-color="#0064ff" flood-opacity="0.06" result="cooling"/>
+          <feBlend mode="normal" in="cooling" in2="balanced" result="blended"/>
+        </filter>
+      </defs>
+    </svg>
+
     <main>
       <video id="cameraFeed" autoplay playsinline></video>
     </main>
@@ -202,14 +212,12 @@
         <button id="captureButton" disabled>
           <span class="button-icon" aria-hidden="true">
             <svg viewBox="0 0 64 64" focusable="false">
-              <path
-                d="M22 16a4 4 0 0 1 4-4h12a4 4 0 0 1 4 4h8a6 6 0 0 1 6 6v24a6 6 0 0 1-6 6H14a6 6 0 0 1-6-6V22a6 6 0 0 1 6-6h8Zm22 10a12 12 0 1 0 0 24 12 12 0 0 0 0-24Zm0 6a6 6 0 1 1 0 12 6 6 0 0 1 0-12Z"
-              />
+              <path d="M22 16a4 4 0 0 1 4-4h12a4 4 0 0 1 4 4h8a6 6 0 0 1 6 6v24a6 6 0 0 1-6 6H14a6 6 0 0 1-6-6V22a6 6 0 0 1 6-6h8Zm22 10a12 12 0 1 0 0 24 12 12 0 0 0 0-24Zm0 6a6 6 0 1 1 0 12 6 6 0 0 1 0-12Z" />
             </svg>
           </span>
           <span class="button-label">Take Photo</span>
         </button>
-        <button id="switchButton" disabled>Switch Camera</button>
+        <button id="switchButton" disabled>Switch</button>
       </div>
       <div class="status" id="status">Allow camera access to begin.</div>
     </div>
@@ -227,13 +235,9 @@
       let currentFacing = "environment";
 
       async function startCamera(options = {}) {
-        const {
-          facingMode = currentFacing,
-          showRetryOverlay = true,
-        } = options;
+        const { facingMode = currentFacing, showRetryOverlay = true } = options;
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          status.textContent =
-            "Camera access is not supported in this browser.";
+          status.textContent = "Camera access is not supported.";
           button.disabled = true;
           return;
         }
@@ -264,8 +268,8 @@
           console.error(error);
           const hadStream = Boolean(previousStream);
           status.textContent = hadStream
-            ? "Unable to switch camera. Keeping current view."
-            : "Unable to access the camera. Check permissions and try again.";
+            ? "Keeping current view."
+            : "Check permissions and try again.";
           if (showRetryOverlay) {
             button.disabled = false;
             button.textContent = "Try Again";
@@ -276,13 +280,74 @@
             captureButton.disabled = true;
             switchButton.style.display = "none";
             switchButton.disabled = true;
-          } else {
-            captureButton.style.display = "block";
-            captureButton.disabled = false;
-            switchButton.style.display = "block";
-            switchButton.disabled = false;
           }
         }
+      }
+
+      function applyTechnicolorFilter(context, width, height) {
+        const imageData = context.getImageData(0, 0, width, height);
+        const data = imageData.data;
+        const lut = new Uint8Array(256);
+        
+        for (let i = 0; i < 256; i++) {
+          if (i <= 128) {
+            lut[i] = 8 + (127 * i) / 128; 
+          } else {
+            lut[i] = 135 + (110 * (i - 128)) / 127;
+          }
+        }
+
+        for (let i = 0; i < data.length; i += 4) {
+          let r = data[i];
+          let g = data[i + 1];
+          let b = data[i + 2];
+
+          const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+          r = gray + (r - gray) * 0.88;
+          g = gray + (g - gray) * 0.88;
+          b = gray + (b - gray) * 0.88;
+
+          r = lut[r];
+          g = lut[g];
+          b = lut[b];
+
+          if (r < 60) { r += 8; b += 6; } 
+          else if (r > 200) { r -= 2; b -= 3; }
+          else { r -= 2; b += 2; }
+
+          r = Math.min(255, Math.max(0, r + (0 - r) * 0.06));
+          g = Math.min(255, Math.max(0, g + (100 - g) * 0.06));
+          b = Math.min(255, Math.max(0, b + (255 - b) * 0.06));
+
+          data[i] = r;
+          data[i + 1] = g;
+          data[i + 2] = b;
+        }
+
+        context.putImageData(imageData, 0, 0);
+
+        context.save();
+        context.globalCompositeOperation = "overlay";
+        context.fillStyle = "rgba(0,0,0,0.12)"; 
+        
+        const noiseCanvas = document.createElement("canvas");
+        noiseCanvas.width = 100;
+        noiseCanvas.height = 100;
+        const noiseCtx = noiseCanvas.getContext("2d");
+        const noiseData = noiseCtx.createImageData(100, 100);
+        for(let j=0; j<noiseData.data.length; j+=4) {
+             const v = Math.random() * 255;
+             noiseData.data[j] = v;
+             noiseData.data[j+1] = v;
+             noiseData.data[j+2] = v;
+             noiseData.data[j+3] = 40;
+        }
+        noiseCtx.putImageData(noiseData, 0, 0);
+        
+        const pattern = context.createPattern(noiseCanvas, "repeat");
+        context.fillStyle = pattern;
+        context.fillRect(0, 0, width, height);
+        context.restore();
       }
 
       function capturePhoto() {
@@ -296,10 +361,11 @@
         canvas.width = width;
         canvas.height = height;
         ctx.drawImage(video, 0, 0, width, height);
-        applyBlueTint(ctx, width, height);
+        
+        applyTechnicolorFilter(ctx, width, height);
 
         const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-        const filename = `photo-${timestamp}.png`;
+        const filename = `technicolor-${timestamp}.png`;
         canvas.toBlob((blob) => {
           if (!blob) {
             status.textContent = "Could not capture photo.";
@@ -316,18 +382,6 @@
           setTimeout(() => URL.revokeObjectURL(url), 1000);
           status.textContent = `Saved ${filename} locally.`;
         }, "image/png");
-      }
-
-      function applyBlueTint(context, width, height) {
-        context.save();
-        const gradient = context.createLinearGradient(0, 0, 0, height);
-        gradient.addColorStop(0, "rgba(40, 130, 255, 0.6)");
-        gradient.addColorStop(0.4, "rgba(30, 110, 255, 0.35)");
-        gradient.addColorStop(1, "rgba(2, 15, 60, 0.55)");
-        context.globalCompositeOperation = "screen";
-        context.fillStyle = gradient;
-        context.fillRect(0, 0, width, height);
-        context.restore();
       }
 
       function switchCamera() {
