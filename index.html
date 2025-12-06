@@ -37,18 +37,7 @@
         width: 100%;
         height: 100%;
         object-fit: cover;
-        filter: url(#technicolor-live);
-      }
-
-      main::after {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background: url('data:image/svg+xml;utf8,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noiseFilter"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noiseFilter)" opacity="0.12"/%3E%3C/svg%3E');
-        opacity: 0.15;
-        pointer-events: none;
-        z-index: 1;
-        mix-blend-mode: overlay;
+        filter: url(#technicolorFilter);
       }
 
       .controls {
@@ -65,7 +54,6 @@
         background: rgba(0, 0, 0, 0.6);
         backdrop-filter: blur(14px);
         width: min(95vw, 620px);
-        z-index: 10;
       }
 
       .action-row {
@@ -83,7 +71,7 @@
         font-weight: 600;
         border-radius: 16px;
         border: none;
-        background: #e32828;
+        background: #e62e2e;
         color: #fff;
         cursor: pointer;
         transition: opacity 0.2s ease, transform 0.2s ease;
@@ -93,8 +81,7 @@
       }
 
       button:disabled {
-        background: #552a2a;
-        color: #aaa;
+        background: #552b2b;
         cursor: not-allowed;
       }
 
@@ -126,6 +113,10 @@
         margin-right: 0.7rem;
       }
 
+      #captureButton .button-label {
+        display: inline-block;
+      }
+
       #captureButton svg {
         width: clamp(24px, 3vw, 36px);
         height: clamp(24px, 3vw, 36px);
@@ -148,8 +139,8 @@
         display: flex;
         justify-content: center;
         align-items: center;
-        background: #000;
-        z-index: 20;
+        background: rgba(0, 0, 0, 0.8);
+        z-index: 2;
         transition: opacity 0.3s ease;
       }
 
@@ -164,13 +155,26 @@
         border-radius: 999px;
       }
 
+      .filters-svg {
+        position: absolute;
+        width: 0;
+        height: 0;
+        pointer-events: none;
+      }
+
       @media (max-width: 640px) {
         .controls {
           bottom: 0.5rem;
         }
+
+        .status {
+          font-size: 0.85rem;
+        }
+
         #switchButton {
           order: 2;
         }
+
         #captureButton {
           order: 1;
         }
@@ -178,46 +182,80 @@
     </style>
   </head>
   <body>
-    <svg style="display: none;">
-      <defs>
-        <filter id="technicolor-live">
-          <feColorMatrix type="saturate" values="0.88" result="saturated" />
-          
-          <feComponentTransfer in="saturated" result="curved">
-            <feFuncR type="table" tableValues="0.03 0.53 0.96"/>
-            <feFuncG type="table" tableValues="0 0.5 1"/>
-            <feFuncB type="table" tableValues="0.02 0.5 0.95"/>
-          </feComponentTransfer>
-          
-          <feColorMatrix in="curved" type="matrix" values="
-            1 0 0 0 0
-            0 1 0 0 0
-            0 0 1.05 0 -0.02
-            0 0 0 1 0" result="balanced"/>
-             
-          <feFlood flood-color="#0064ff" flood-opacity="0.06" result="cooling"/>
-          <feBlend mode="normal" in="cooling" in2="balanced" result="blended"/>
-        </filter>
-      </defs>
+    <svg class="filters-svg">
+      <filter id="technicolorFilter">
+        <feColorMatrix 
+          type="matrix" 
+          values="1.1 0 0 0 0
+                  0 0.9 0 0 0
+                  0 0 0.85 0 0
+                  0 0 0 1 0" 
+          result="colorBalance"
+        />
+
+        <feComponentTransfer in="colorBalance" result="contrastCurves">
+          <feFuncR type="table" tableValues="0.03 0.1 0.25 0.45 0.65 0.85 1.0"/>
+          <feFuncG type="table" tableValues="0.02 0.15 0.35 0.55 0.75 0.95 1.0"/>
+          <feFuncB type="table" tableValues="0.04 0.15 0.30 0.5 0.7 0.9 0.95"/>
+        </feComponentTransfer>
+
+        <feColorMatrix 
+          in="contrastCurves" 
+          type="saturate" 
+          values="1.45" 
+          result="saturated"
+        />
+
+        <feColorMatrix 
+          in="saturated" 
+          type="matrix" 
+          values="1.1 -0.1 -0.1 0 0
+                  -0.05 1.1 -0.05 0 0
+                  -0.05 -0.05 1.1 0 0
+                  0 0 0 1 0" 
+          result="selectiveColor"
+        />
+
+        <feTurbulence 
+          type="fractalNoise" 
+          baseFrequency="0.75" 
+          numOctaves="2" 
+          stitchTiles="stitch" 
+          result="noise"
+        />
+        <feColorMatrix 
+          in="noise" 
+          type="matrix" 
+          values="1 0 0 0 0
+                  0 1 0 0 0
+                  0 0 1 0 0
+                  0 0 0 0.15 0" 
+          result="softNoise"
+        />
+        
+        <feBlend in="softNoise" in2="selectiveColor" mode="overlay" result="final"/>
+      </filter>
     </svg>
 
     <main>
       <video id="cameraFeed" autoplay playsinline></video>
     </main>
     <div class="start-overlay" id="startOverlay">
-      <button id="startButton">Start Camera</button>
+      <button id="startButton">Start Technicolor Cam</button>
     </div>
     <div class="controls">
       <div class="action-row">
         <button id="captureButton" disabled>
           <span class="button-icon" aria-hidden="true">
             <svg viewBox="0 0 64 64" focusable="false">
-              <path d="M22 16a4 4 0 0 1 4-4h12a4 4 0 0 1 4 4h8a6 6 0 0 1 6 6v24a6 6 0 0 1-6 6H14a6 6 0 0 1-6-6V22a6 6 0 0 1 6-6h8Zm22 10a12 12 0 1 0 0 24 12 12 0 0 0 0-24Zm0 6a6 6 0 1 1 0 12 6 6 0 0 1 0-12Z" />
+              <path
+                d="M22 16a4 4 0 0 1 4-4h12a4 4 0 0 1 4 4h8a6 6 0 0 1 6 6v24a6 6 0 0 1-6 6H14a6 6 0 0 1-6-6V22a6 6 0 0 1 6-6h8Zm22 10a12 12 0 1 0 0 24 12 12 0 0 0 0-24Zm0 6a6 6 0 1 1 0 12 6 6 0 0 1 0-12Z"
+              />
             </svg>
           </span>
           <span class="button-label">Take Photo</span>
         </button>
-        <button id="switchButton" disabled>Switch</button>
+        <button id="switchButton" disabled>Switch Camera</button>
       </div>
       <div class="status" id="status">Allow camera access to begin.</div>
     </div>
@@ -235,9 +273,13 @@
       let currentFacing = "environment";
 
       async function startCamera(options = {}) {
-        const { facingMode = currentFacing, showRetryOverlay = true } = options;
+        const {
+          facingMode = currentFacing,
+          showRetryOverlay = true,
+        } = options;
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          status.textContent = "Camera access is not supported.";
+          status.textContent =
+            "Camera access is not supported in this browser.";
           button.disabled = true;
           return;
         }
@@ -247,7 +289,7 @@
           status.textContent = "Starting camera…";
           button.disabled = true;
           const newStream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode },
+            video: { facingMode, width: { ideal: 1920 }, height: { ideal: 1080 } },
             audio: false,
           });
           stream = newStream;
@@ -268,8 +310,8 @@
           console.error(error);
           const hadStream = Boolean(previousStream);
           status.textContent = hadStream
-            ? "Keeping current view."
-            : "Check permissions and try again.";
+            ? "Unable to switch camera. Keeping current view."
+            : "Unable to access the camera. Check permissions and try again.";
           if (showRetryOverlay) {
             button.disabled = false;
             button.textContent = "Try Again";
@@ -280,74 +322,13 @@
             captureButton.disabled = true;
             switchButton.style.display = "none";
             switchButton.disabled = true;
-          }
-        }
-      }
-
-      function applyTechnicolorFilter(context, width, height) {
-        const imageData = context.getImageData(0, 0, width, height);
-        const data = imageData.data;
-        const lut = new Uint8Array(256);
-        
-        for (let i = 0; i < 256; i++) {
-          if (i <= 128) {
-            lut[i] = 8 + (127 * i) / 128; 
           } else {
-            lut[i] = 135 + (110 * (i - 128)) / 127;
+            captureButton.style.display = "block";
+            captureButton.disabled = false;
+            switchButton.style.display = "block";
+            switchButton.disabled = false;
           }
         }
-
-        for (let i = 0; i < data.length; i += 4) {
-          let r = data[i];
-          let g = data[i + 1];
-          let b = data[i + 2];
-
-          const gray = 0.299 * r + 0.587 * g + 0.114 * b;
-          r = gray + (r - gray) * 0.88;
-          g = gray + (g - gray) * 0.88;
-          b = gray + (b - gray) * 0.88;
-
-          r = lut[r];
-          g = lut[g];
-          b = lut[b];
-
-          if (r < 60) { r += 8; b += 6; } 
-          else if (r > 200) { r -= 2; b -= 3; }
-          else { r -= 2; b += 2; }
-
-          r = Math.min(255, Math.max(0, r + (0 - r) * 0.06));
-          g = Math.min(255, Math.max(0, g + (100 - g) * 0.06));
-          b = Math.min(255, Math.max(0, b + (255 - b) * 0.06));
-
-          data[i] = r;
-          data[i + 1] = g;
-          data[i + 2] = b;
-        }
-
-        context.putImageData(imageData, 0, 0);
-
-        context.save();
-        context.globalCompositeOperation = "overlay";
-        context.fillStyle = "rgba(0,0,0,0.12)"; 
-        
-        const noiseCanvas = document.createElement("canvas");
-        noiseCanvas.width = 100;
-        noiseCanvas.height = 100;
-        const noiseCtx = noiseCanvas.getContext("2d");
-        const noiseData = noiseCtx.createImageData(100, 100);
-        for(let j=0; j<noiseData.data.length; j+=4) {
-             const v = Math.random() * 255;
-             noiseData.data[j] = v;
-             noiseData.data[j+1] = v;
-             noiseData.data[j+2] = v;
-             noiseData.data[j+3] = 40;
-        }
-        noiseCtx.putImageData(noiseData, 0, 0);
-        
-        const pattern = context.createPattern(noiseCanvas, "repeat");
-        context.fillStyle = pattern;
-        context.fillRect(0, 0, width, height);
-        context.restore();
       }
 
       function capturePhoto() {
@@ -360,9 +341,10 @@
         const height = video.videoHeight || 720;
         canvas.width = width;
         canvas.height = height;
-        ctx.drawImage(video, 0, 0, width, height);
         
-        applyTechnicolorFilter(ctx, width, height);
+        ctx.filter = "url(#technicolorFilter)";
+        ctx.drawImage(video, 0, 0, width, height);
+        ctx.filter = "none";
 
         const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
         const filename = `technicolor-${timestamp}.png`;
